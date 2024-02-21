@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "org.typelevel"                %% "cats-core"           % "2.9.0",
   "org.typelevel"                %% "cats-effect"         % "3.4.8",
   "org.tpolecat"                 %% "doobie-core"         % "1.0.0-M5",
+  "org.tpolecat"                 %% "doobie-postgres"     % "1.0.0-M5",
   "org.postgresql"               % "postgresql"           % "42.7.1",
   "org.flywaydb"                 % "flyway-core"          % "9.0.0",
   "com.disneystreaming.smithy4s" %% "smithy4s-core"       % smithy4sVersion.value,

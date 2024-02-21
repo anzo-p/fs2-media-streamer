@@ -2,7 +2,6 @@ package net.anzop.db
 
 import cats.effect.IO
 import doobie._
-import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
 import net.anzop.helpers.Extensions.EnvOps
 
