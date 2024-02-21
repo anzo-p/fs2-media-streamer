@@ -1,13 +1,12 @@
 package net.anzop.db
 
-import cats.effect.IO
-import doobie._
-import doobie.util.transactor.Transactor.Aux
+import cats.effect.Async
+import doobie.util.transactor.Transactor
 import net.anzop.helpers.Extensions.EnvOps
 
-object Doobie {
+class Doobie[F[_] : Async] {
 
-  val xa: Aux[IO, Unit] = Transactor.fromDriverManager[IO](
+  val xa: Transactor[F] = Transactor.fromDriverManager[F](
     "org.postgresql.Driver",
     sys.env.getOrThrow("DB_URL", "DB_URL is not set"),
     sys.env.getOrThrow("DB_USERNAME", "DB_USERNAME is not set"),

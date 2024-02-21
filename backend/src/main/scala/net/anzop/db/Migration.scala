@@ -1,11 +1,12 @@
 package net.anzop.db
 
+import cats.effect.Async
 import net.anzop.config.DbConfig
 import org.flywaydb.core.Flyway
 
 object Migration {
 
-  def flywayMigrate(dbConfig: DbConfig): Unit = {
+  def flywayMigrate[F[_] : Async](dbConfig: DbConfig): F[Unit] = Async[F].delay {
     val flyway = Flyway
       .configure()
       .locations("classpath:db/migration")

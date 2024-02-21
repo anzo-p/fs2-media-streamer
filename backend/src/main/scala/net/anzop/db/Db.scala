@@ -1,17 +1,18 @@
 package net.anzop.db
 
-import cats.effect.IO
+import cats.effect.Async
+import cats.syntax.all._
 import doobie.Update
 import doobie.implicits._
 import doobie.postgres.implicits._
+import doobie.util.transactor.Transactor
 import net.anzop.audiostreamer.{AddTrackMetadataInput, TrackMetadataOutput}
-import net.anzop.db.Doobie.xa
 
 import java.util.UUID
 
 object Db {
 
-  def addTrackMetadata(metadata: AddTrackMetadataInput): IO[String] = {
+  def addTrackMetadata[F[_] : Async](metadata: AddTrackMetadataInput)(implicit xa: Transactor[F]): F[String] = {
     val trackMetadata = TrackMetadataOutput(
       album    = metadata.album,
       artist   = metadata.artist,
@@ -31,14 +32,11 @@ object Db {
     """
 
     for {
-      result <- Update[TrackMetadataOutput](insertSql)
-                 .run(trackMetadata)
-                 .transact(xa)
-                 .map(_ => trackMetadata.trackId)
-                 .attempt
-
-      _ <- IO(println(s"Insert result: $result"))
-
+      _ <- Update[TrackMetadataOutput](insertSql)
+            .run(trackMetadata)
+            .transact(xa)
+            .onError { case e => Async[F].delay(println(s"Error: $e")) }
+            .map(_ => trackMetadata.trackId)
     } yield trackMetadata.trackId
   }
 }
