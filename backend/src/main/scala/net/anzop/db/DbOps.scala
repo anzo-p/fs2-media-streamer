@@ -7,20 +7,26 @@ import doobie.implicits._
 import doobie.postgres.implicits._
 import doobie.util.transactor.Transactor
 import net.anzop.audiostreamer.{AddTrackMetadataInput, TrackMetadataOutput}
+import net.anzop.db.errors.DatabaseError
 
 import java.util.UUID
 
-object Db {
+object DbOps {
 
-  def addTrackMetadata[F[_] : Async](metadata: AddTrackMetadataInput)(implicit xa: Transactor[F]): F[String] = {
+  def addTrackMetadata[F[_] : Async](
+      metadata: AddTrackMetadataInput
+    )(implicit
+      xa: Transactor[F]
+    ): F[Either[DatabaseError, TrackMetadataOutput]] = {
+
     val trackMetadata = TrackMetadataOutput(
       album    = metadata.album,
       artist   = metadata.artist,
       bitrate  = metadata.bitrate,
       duration = metadata.duration,
-      genre    = metadata.genre,
       fileSize = metadata.fileSize,
       format   = metadata.format,
+      genre    = metadata.genre,
       title    = metadata.title,
       trackId  = UUID.randomUUID().toString,
       year     = metadata.year
@@ -32,11 +38,17 @@ object Db {
     """
 
     for {
-      _ <- Update[TrackMetadataOutput](insertSql)
-            .run(trackMetadata)
-            .transact(xa)
-            .onError { case e => Async[F].delay(println(s"Error: $e")) }
-            .map(_ => trackMetadata.trackId)
-    } yield trackMetadata.trackId
+      result <- Update[TrackMetadataOutput](insertSql)
+                 .run(trackMetadata)
+                 .transact(xa)
+                 .attempt
+
+    } yield result match {
+      case Left(th: Throwable) => {
+        println(s"Error: ${th.getMessage}")
+        Left(DatabaseError.handle(th))
+      }
+      case Right(_) => Right(trackMetadata)
+    }
   }
 }

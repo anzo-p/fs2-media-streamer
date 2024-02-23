@@ -5,7 +5,7 @@ import cats.implicits._
 import doobie.util.transactor.Transactor
 import io.circe.generic.auto._
 import net.anzop.audiostreamer.AddTrackMetadataInput
-import net.anzop.db.Db
+import net.anzop.db.DbOps
 import org.http4s.HttpRoutes
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
@@ -17,7 +17,7 @@ class AudioRack[F[_] : Async](implicit xa: Transactor[F]) extends Http4sDsl[F] {
     case req @ POST -> Root / "tracks" =>
       for {
         metadata <- req.as[AddTrackMetadataInput]
-        _        <- Db.addTrackMetadata(metadata)
+        _        <- DbOps.addTrackMetadata(metadata)
         response <- Created()
       } yield response
   }
