@@ -28,11 +28,11 @@ structure AddTrackMetadataInput {
     @required
     duration: Integer,
     @required
-    genre: GenreList,
-    @required
     fileSize: Integer,
     @required
     format: String,
+    @required
+    genre: GenreList,
     @required
     title: String,
     year: Integer,
@@ -46,11 +46,11 @@ structure TrackMetadataOutput {
     @required
     duration: Integer,
     @required
-    genre: GenreList,
-    @required
     fileSize: Integer,
     @required
     format: String,
+    @required
+    genre: GenreList,
     @required
     title: String,
     @required
