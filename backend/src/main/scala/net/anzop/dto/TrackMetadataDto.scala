@@ -62,6 +62,7 @@ object TrackMetadataDto {
       input.artist.validNel,
       validateBitrate(input.bitrate),
       input.duration.validNel,
+      "".validNel,
       validateFileSize(input.fileSize),
       validateFormat(input.format),
       input.genre.validNel,

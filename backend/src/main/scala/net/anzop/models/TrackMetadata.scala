@@ -5,6 +5,7 @@ final case class TrackMetadata(
     artist: String,
     bitrate: Option[Int] = None,
     duration: Int,
+    filepath: String,
     fileSize: Int,
     format: String,
     genre: List[String],

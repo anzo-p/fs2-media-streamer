@@ -7,6 +7,9 @@ trait DatabaseError {
 }
 
 case class DuplicateEntity(message: String) extends DatabaseError
+case object NoDataFound extends DatabaseError {
+  val message: String = "No data found"
+}
 case class OtherDbError(message: String) extends DatabaseError
 case class SqlError(message: String) extends DatabaseError
 case class TimeoutError(message: String) extends DatabaseError

@@ -73,7 +73,7 @@ structure UploadTrackInput {
     trackId: String,
 
     @required
-    track: Blob
+    file: Blob
 }
 
 @http(method: "GET", uri: "/tracks", code: 200)
