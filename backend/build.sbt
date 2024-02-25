@@ -24,3 +24,7 @@ libraryDependencies ++= Seq(
   "org.http4s"                   %% "http4s-circe"        % "0.23.14",
   "io.circe"                     %% "circe-generic"       % "0.14.5"
 )
+
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "3.2.18" % "test"
+)

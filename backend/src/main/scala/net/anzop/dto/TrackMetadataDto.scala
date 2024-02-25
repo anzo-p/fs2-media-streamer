@@ -12,7 +12,9 @@ import java.util.UUID
 object TrackMetadataDto {
 
   def toModel(dto: AddTrackMetadataInput): Either[InvalidObject, TrackMetadata] =
-    validate(dto).toEither.leftMap(invalid => InvalidObject(invalid.toList.mkString(", ")))
+    validate(dto)
+      .toEither
+      .leftMap(invalid => InvalidObject(invalid.toList.map(_.message).mkString(", ")))
 
   def fromModel(model: TrackMetadata): TrackMetadataOutput = {
     TrackMetadataOutput(
@@ -32,14 +34,14 @@ object TrackMetadataDto {
   private def validateBitrate(bitrate: Option[Int]): ValidatedNel[InvalidObject, Option[Int]] =
     bitrate match {
       case Some(b) if b <= 0     => InvalidObject("Invalid bitrate").invalidNel
-      case Some(b) if b > 400000 => InvalidObject("Bitrate too high").invalidNel
+      case Some(b) if b > 400000 => InvalidObject("Bitrate is too high").invalidNel
       case _                     => bitrate.validNel
     }
 
   private def validateFileSize(fileSize: Int): ValidatedNel[InvalidObject, Int] =
     fileSize match {
       case size if size <= 0        => InvalidObject("Invalid file size").invalidNel
-      case size if size > 100000000 => InvalidObject("File size too large").invalidNel
+      case size if size > 100000000 => InvalidObject("File size is too large").invalidNel
       case _                        => fileSize.validNel
     }
 
