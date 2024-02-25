@@ -3,7 +3,9 @@ $version: "2"
 namespace net.anzop.audiostreamer
 
 use alloy#simpleRestJson
+use smithy4s.meta#packedInputs
 
+@packedInputs
 @simpleRestJson
 service AudioRackService {
     version: "2021-02-21",
