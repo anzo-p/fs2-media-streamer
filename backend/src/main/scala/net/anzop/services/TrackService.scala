@@ -7,6 +7,7 @@ import doobie.util.transactor.Transactor
 import net.anzop.audiostreamer._
 import net.anzop.db.DbOps
 import net.anzop.dto.TrackMetadataDto
+import net.anzop.services.ServiceResult._
 import org.http4s.multipart.Part
 import smithy4s.Blob
 

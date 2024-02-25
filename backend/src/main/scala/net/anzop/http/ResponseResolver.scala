@@ -4,7 +4,7 @@ import cats.effect.Sync
 import io.circe.generic.auto._
 import io.circe.syntax.EncoderOps
 import net.anzop.audiostreamer.TrackMetadataOutput
-import net.anzop.services.{ConflictError, InvalidObject, NotFoundError, ResourceError, ServiceError, ServiceResult, SuccessResult}
+import net.anzop.services.ServiceResult._
 import org.http4s.Response
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.dsl.Http4sDsl

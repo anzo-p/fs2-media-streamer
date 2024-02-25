@@ -9,7 +9,7 @@ import doobie.util.transactor.Transactor
 import doobie.{ConnectionIO, Update}
 import net.anzop.db.errors._
 import net.anzop.models.TrackMetadata
-import net.anzop.services.{ServiceResult, SuccessResult}
+import net.anzop.services.ServiceResult._
 
 class DbOps[F[_] : Async] {
 

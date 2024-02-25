@@ -3,7 +3,7 @@ package net.anzop.dto
 import net.anzop.audiostreamer.{AddTrackMetadataInput, TrackMetadataOutput}
 import net.anzop.dto.TrackMetadataDto._
 import net.anzop.models.TrackMetadata
-import net.anzop.services.InvalidObject
+import net.anzop.services.ServiceResult._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
