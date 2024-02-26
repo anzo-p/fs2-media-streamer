@@ -1,10 +1,12 @@
 package net.anzop.http
 
+import cats.data.{EitherT, OptionT}
 import cats.effect._
 import cats.implicits._
 import io.circe.generic.auto._
 import net.anzop.audiostreamer.AddTrackMetadataInput
 import net.anzop.models.TrackMetadataQueryArgs
+import net.anzop.services.ServiceResult.{NotFoundError, ServiceError}
 import net.anzop.services.TrackService
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe.CirceSensitiveDataEntityDecoder.circeEntityDecoder
@@ -52,5 +54,20 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
       } yield response).recoverWith {
         case _ => InternalServerError("An unexpected error occurred")
       }
+
+    case GET -> Root / "tracks" / trackId =>
+      val handler = for {
+        track      <- EitherT(service.getTrackMetadata(trackId)).map(_.result)
+        blobOption <- OptionT(service.downloadTrack(track)).toRight(NotFoundError: ServiceError)
+        response   <- EitherT.rightT[F, ServiceError](responses.respondFileStream(track, blobOption))
+      } yield response
+
+      handler
+        .value
+        .flatMap {
+          case Right(resp) => resp
+          case Left(error) => responses.resolveResponse(Left(error))
+        }
+        .recoverWith { case _ => InternalServerError("An unexpected error occurred") }
   }
 }

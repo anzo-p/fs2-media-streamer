@@ -7,7 +7,7 @@ import doobie.util.transactor.Transactor
 import net.anzop.audiostreamer._
 import net.anzop.db.DbOps
 import net.anzop.dto.TrackMetadataDto
-import net.anzop.models.TrackMetadataQueryArgs
+import net.anzop.models.{TrackMetadata, TrackMetadataQueryArgs}
 import net.anzop.services.ServiceResult._
 import org.http4s.multipart.Part
 import smithy4s.Blob
@@ -46,4 +46,16 @@ class TrackService[F[_] : Async](implicit xa: Transactor[F], fs: FileService[F],
         tracks <- EitherT(db.getManyTracks(args).map(_.leftMap(ServiceError.handle)))
       } yield SuccessResult(tracks.map(TrackMetadataDto.fromModel))
     ).value
+
+  def getTrackMetadata(trackId: String): F[Either[ServiceError, SuccessResult[TrackMetadata]]] =
+    (
+      for {
+        track <- EitherT(db.getOneTrack(trackId).map(_.leftMap(ServiceError.handle)))
+      } yield SuccessResult(track)
+    ).value
+
+  def downloadTrack(track: TrackMetadata): F[Option[Blob]] =
+    fs.load(track.filepath).map(Option.apply).recover {
+      case _: Throwable => None
+    }
 }

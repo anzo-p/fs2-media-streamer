@@ -36,4 +36,11 @@ class FileService[F[_] : Async] {
       }
       .as(path)
   }
+
+  def load(filepath: String): F[Blob] =
+    Files[F]
+      .readAll(Path(filepath), 4096, Flags(Read))
+      .compile
+      .to(Array)
+      .map(Blob.apply)
 }

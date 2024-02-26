@@ -1,14 +1,20 @@
 package net.anzop.http
 
 import cats.effect._
+import cats.implicits._
+import fs2.Stream
 import io.circe.generic.auto._
 import io.circe.syntax.EncoderOps
 import net.anzop.audiostreamer.TrackMetadataOutput
+import net.anzop.models.TrackMetadata
 import net.anzop.services.ServiceResult._
-import org.http4s.Response
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
+import org.http4s.headers.`Content-Type`
+import org.http4s.{headers, MediaType, Response}
+import org.typelevel.ci.CIStringSyntax
+import smithy4s.Blob
 
 trait ResponseResolver[F[_]] extends Http4sDsl[F] {
   implicit def F: Sync[F]
@@ -29,6 +35,11 @@ trait ResponseResolver[F[_]] extends Http4sDsl[F] {
       case Left(NotFoundError)              => NotFound()
       case Left(_: ServiceError)            => InternalServerError("An unexpected error occurred")
     }
+
+  def respondFileStream(metadata: TrackMetadata, file: Blob): F[Response[F]] =
+    Ok(Stream.emits(file.toArray).covary[F])
+      .map(_.withContentType(`Content-Type`(MediaType.application.`octet-stream`)))
+      .map(_.withHeaders(headers.`Content-Disposition`("attachment", Map(ci"filename" -> s"${metadata.title}.${metadata.format}"))))
 }
 
 object ResponseResolver {
