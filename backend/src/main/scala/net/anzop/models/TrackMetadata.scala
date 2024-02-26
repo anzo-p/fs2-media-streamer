@@ -13,3 +13,14 @@ final case class TrackMetadata(
     trackId: String,
     year: Option[Int] = None
   )
+
+final case class TrackMetadataQueryArgs(
+    album: Option[String]   = None,
+    artist: Option[String]  = None,
+    genre: Option[String]   = None,
+    title: Option[String]   = None,
+    year: Option[Int]       = None,
+    sortKey: Option[String] = None,
+    page: Int,
+    batchSize: Int
+  )

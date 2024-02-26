@@ -7,38 +7,43 @@ import doobie.util.transactor.Transactor
 import net.anzop.audiostreamer._
 import net.anzop.db.DbOps
 import net.anzop.dto.TrackMetadataDto
+import net.anzop.models.TrackMetadataQueryArgs
 import net.anzop.services.ServiceResult._
 import org.http4s.multipart.Part
 import smithy4s.Blob
 
 class TrackService[F[_] : Async](implicit xa: Transactor[F], fs: FileService[F], db: DbOps[F]) {
 
-  def addTrackMetadata(input: AddTrackMetadataInput): F[ServiceResult] = {
-    val operation = for {
-      model <- EitherT.fromEither[F](TrackMetadataDto.toModel(input))
-      _     <- EitherT(db.addTrackMetadata(model).map(_.leftMap(ServiceError.handle)))
-    } yield SuccessResult(TrackMetadataDto.fromModel(model))
+  def addTrackMetadata(input: AddTrackMetadataInput): F[Either[ServiceError, SuccessResult[TrackMetadataOutput]]] =
+    (
+      for {
+        model <- EitherT.fromEither[F](TrackMetadataDto.toModel(input))
+        _     <- EitherT(db.addTrackMetadata(model).map(_.leftMap(ServiceError.handle)))
+      } yield SuccessResult(TrackMetadataDto.fromModel(model))
+    ).value
 
-    operation.value.map(_.merge)
-  }
+  def uploadTrackFile(trackId: String, file: Part[F]): F[Either[ServiceError, SuccessResult[Unit]]] =
+    (
+      for {
+        _    <- EitherT(db.getOneTrack(trackId).map(_.leftMap(ServiceError.handle)))
+        path <- EitherT.right(fs.saveAsync(trackId, file))
+        _    <- EitherT(db.updateFilepath(trackId, path.toString).map(_.leftMap(ServiceError.handle)))
+      } yield SuccessResult()
+    ).value
 
-  def uploadTrackFile(trackId: String, file: Part[F]): F[ServiceResult] = {
-    val operation = for {
-      _    <- EitherT(db.getTrackMetadata(trackId).map(_.leftMap(ServiceError.handle)))
-      path <- EitherT.right(fs.saveAsync(trackId, file))
-      _    <- EitherT(db.updateFilepath(trackId, path.toString).map(_.leftMap(ServiceError.handle)))
-    } yield SuccessResult()
+  def uploadTrackFile(trackId: String, filename: String, file: Blob): F[Either[ServiceError, SuccessResult[Unit]]] =
+    (
+      for {
+        _    <- EitherT(db.getOneTrack(trackId).map(_.leftMap(ServiceError.handle)))
+        path <- EitherT.right(fs.saveSync(trackId, filename, file))
+        _    <- EitherT(db.updateFilepath(trackId, path.toString).map(_.leftMap(ServiceError.handle)))
+      } yield SuccessResult()
+    ).value
 
-    operation.value.map(_.merge)
-  }
-
-  def uploadTrackFile(trackId: String, filename: String, file: Blob): F[ServiceResult] = {
-    val operation = for {
-      _    <- EitherT(db.getTrackMetadata(trackId).map(_.leftMap(ServiceError.handle)))
-      path <- EitherT.right(fs.saveSync(trackId, filename, file))
-      _    <- EitherT(db.updateFilepath(trackId, path.toString).map(_.leftMap(ServiceError.handle)))
-    } yield SuccessResult()
-
-    operation.value.map(_.merge)
-  }
+  def getTrackList(args: TrackMetadataQueryArgs): F[Either[ServiceError, SuccessResult[List[TrackMetadataOutput]]]] =
+    (
+      for {
+        tracks <- EitherT(db.getManyTracks(args).map(_.leftMap(ServiceError.handle)))
+      } yield SuccessResult(tracks.map(TrackMetadataDto.fromModel))
+    ).value
 }

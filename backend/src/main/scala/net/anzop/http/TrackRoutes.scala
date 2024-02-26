@@ -4,7 +4,9 @@ import cats.effect._
 import cats.implicits._
 import io.circe.generic.auto._
 import net.anzop.audiostreamer.AddTrackMetadataInput
+import net.anzop.models.TrackMetadataQueryArgs
 import net.anzop.services.TrackService
+import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe.CirceSensitiveDataEntityDecoder.circeEntityDecoder
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
@@ -40,6 +42,15 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
           case None =>
             BadRequest("No file part found")
         }
+      }
+
+    case req @ GET -> Root / "tracks" =>
+      (for {
+        input    <- req.as[TrackMetadataQueryArgs]
+        result   <- service.getTrackList(input)
+        response <- responses.resolveResponse(result)
+      } yield response).recoverWith {
+        case _ => InternalServerError("An unexpected error occurred")
       }
   }
 }

@@ -67,7 +67,7 @@ object TrackMetadataDto {
       "".validNel,
       validateFileSize(input.fileSize),
       validateFormat(input.format),
-      input.genre.validNel,
+      input.genre.map(_.toLowerCase).validNel,
       input.title.validNel,
       UUID.randomUUID().toString.validNel,
       validateYear(input.year)

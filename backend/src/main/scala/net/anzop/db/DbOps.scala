@@ -8,13 +8,13 @@ import doobie.postgres.implicits._
 import doobie.util.transactor.Transactor
 import doobie.{ConnectionIO, Update}
 import net.anzop.db.errors._
-import net.anzop.models.TrackMetadata
+import net.anzop.models.{TrackMetadata, TrackMetadataQueryArgs}
 import net.anzop.services.ServiceResult._
 
 class DbOps[F[_] : Async] {
 
   private def runQuery[A](db: ConnectionIO[A])(implicit xa: Transactor[F]): F[Either[DatabaseError, A]] = {
-    EitherT(db.attempt.transact(xa))
+    EitherT(db.transact(xa).attempt)
       .leftMap(th => DatabaseError.handle(th))
       .value
   }
@@ -29,17 +29,40 @@ class DbOps[F[_] : Async] {
       .map(_.map(_ => model))
   }
 
-  def getTrackMetadata(trackId: String)(implicit xa: Transactor[F]): F[Either[DatabaseError, TrackMetadata]] = {
-    val dbOp = sql"""
+  def getOneTrack(trackId: String)(implicit xa: Transactor[F]): F[Either[DatabaseError, TrackMetadata]] = {
+    val q = sql"""
       SELECT album, artist, bitrate, duration, filepath, filesize, format, genre, title, track_id, year
       FROM tracks
       WHERE track_id = $trackId
     """.query[TrackMetadata].option
 
-    runQuery(dbOp).map {
+    runQuery(q).map {
       case Right(Some(trackMetadata)) => Right(trackMetadata)
       case Right(None)                => Left(NoDataFound)
       case Left(error)                => Left(error)
+    }
+  }
+
+  def getManyTracks(args: TrackMetadataQueryArgs)(implicit xa: Transactor[F]): F[Either[DatabaseError, List[TrackMetadata]]] = {
+    def find(s: Option[String]): Option[String] = s.map(a => "%" + a + "%")
+
+    val offset: Int = Math.max(0, (args.page - 1) * args.batchSize)
+
+    val q = fr"""
+      SELECT album, artist, bitrate, duration, filepath, filesize, format, genre, title, track_id, year
+      FROM tracks
+      WHERE """ ++
+      fr"      (album LIKE ${find(args.album)}   OR ${args.album.isEmpty} )" ++
+      fr"AND   (artist LIKE ${find(args.artist)} OR ${args.artist.isEmpty})" ++
+      fr"AND   (title LIKE ${find(args.title)}   OR ${args.title.isEmpty} )" ++
+      fr"AND   (${args.genre} LIKE ANY(genre)    OR ${args.genre.isEmpty} )" ++
+      fr"AND   (${args.year}     = year          OR ${args.year.isEmpty}  )" ++
+      fr"""ORDER BY ${args.sortKey.getOrElse("title")} ASC
+      OFFSET $offset LIMIT ${args.batchSize}"""
+
+    runQuery(q.query[TrackMetadata].to[List]).map {
+      case Right(tracks) => Right(tracks)
+      case Left(error)   => Left(error)
     }
   }
 
