@@ -43,7 +43,7 @@ class DbOps[F[_] : Async] {
     }
   }
 
-  def getManyTracks(args: TrackMetadataQueryArgs)(implicit xa: Transactor[F]): F[Either[DatabaseError, List[TrackMetadata]]] = {
+  def queryManyTracks(args: TrackMetadataQueryArgs)(implicit xa: Transactor[F]): F[Either[DatabaseError, List[TrackMetadata]]] = {
     def find(s: Option[String]): Option[String] = s.map(a => "%" + a + "%")
 
     val offset: Int = Math.max(0, (args.page - 1) * args.batchSize)
@@ -59,6 +59,20 @@ class DbOps[F[_] : Async] {
       fr"AND   (${args.year}     = year          OR ${args.year.isEmpty}  )" ++
       fr"""ORDER BY ${args.sortKey.getOrElse("title")} ASC
       OFFSET $offset LIMIT ${args.batchSize}"""
+
+    runQuery(q.query[TrackMetadata].to[List]).map {
+      case Right(tracks) => Right(tracks)
+      case Left(error)   => Left(error)
+    }
+  }
+
+  def getSampleTracks(n: Int)(implicit xa: Transactor[F]): F[Either[DatabaseError, List[TrackMetadata]]] = {
+    val q = fr"""
+      SELECT album, artist, bitrate, duration, filepath, filesize, format, genre, title, track_id, year
+      FROM tracks
+      ORDER BY RANDOM()
+      LIMIT ${Math.max(0, n)}
+    """
 
     runQuery(q.query[TrackMetadata].to[List]).map {
       case Right(tracks) => Right(tracks)

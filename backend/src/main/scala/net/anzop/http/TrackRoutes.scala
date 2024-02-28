@@ -46,10 +46,18 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
         }
       }
 
-    case req @ GET -> Root / "tracks" =>
+    case req @ POST -> Root / "tracks" / "query" =>
       (for {
         input    <- req.as[TrackMetadataQueryArgs]
         result   <- service.getTrackList(input)
+        response <- responses.resolveResponse(result)
+      } yield response).recoverWith {
+        case _ => InternalServerError("An unexpected error occurred")
+      }
+
+    case GET -> Root / "tracks" / "sample" =>
+      (for {
+        result   <- service.getRandomizedTrackList(10)
         response <- responses.resolveResponse(result)
       } yield response).recoverWith {
         case _ => InternalServerError("An unexpected error occurred")

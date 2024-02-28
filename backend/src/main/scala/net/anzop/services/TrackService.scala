@@ -40,18 +40,25 @@ class TrackService[F[_] : Async](implicit xa: Transactor[F], fs: FileService[F],
       } yield SuccessResult()
     ).value
 
-  def getTrackList(args: TrackMetadataQueryArgs): F[Either[ServiceError, SuccessResult[List[TrackMetadataOutput]]]] =
-    (
-      for {
-        tracks <- EitherT(db.getManyTracks(args).map(_.leftMap(ServiceError.handle)))
-      } yield SuccessResult(tracks.map(TrackMetadataDto.fromModel))
-    ).value
-
   def getTrackMetadata(trackId: String): F[Either[ServiceError, SuccessResult[TrackMetadata]]] =
     (
       for {
         track <- EitherT(db.getOneTrack(trackId).map(_.leftMap(ServiceError.handle)))
       } yield SuccessResult(track)
+    ).value
+
+  def getTrackList(args: TrackMetadataQueryArgs): F[Either[ServiceError, SuccessResult[List[TrackMetadataOutput]]]] =
+    (
+      for {
+        tracks <- EitherT(db.queryManyTracks(args).map(_.leftMap(ServiceError.handle)))
+      } yield SuccessResult(tracks.map(TrackMetadataDto.fromModel))
+    ).value
+
+  def getRandomizedTrackList(n: Int): F[Either[ServiceError, SuccessResult[List[TrackMetadataOutput]]]] =
+    (
+      for {
+        tracks <- EitherT(db.getSampleTracks(n).map(_.leftMap(ServiceError.handle)))
+      } yield SuccessResult(tracks.map(TrackMetadataDto.fromModel))
     ).value
 
   def downloadTrack(track: TrackMetadata): F[Option[Blob]] =
