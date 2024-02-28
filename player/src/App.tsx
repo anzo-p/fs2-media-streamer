@@ -1,11 +1,12 @@
 import { MusicPlayer } from './components/MusicPlayer';
+import { PlayerStateProvider } from './components/PlayerStateProvider';
 import './App.css';
 
 function App() {
   return (
-    <div className="App">
+    <PlayerStateProvider>
       <MusicPlayer />
-    </div>
+    </PlayerStateProvider>
   );
 }
 

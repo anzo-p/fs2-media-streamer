@@ -32,8 +32,7 @@ export const MusicPlayer: React.FC = () => {
         }}
       />
       <AudioTrackList tracks={tracks} onPlayPauseClick={handlePlayPauseClick} />
-      <NowPlaying url="" />
+      <NowPlaying />
     </div>
   );
 };
-

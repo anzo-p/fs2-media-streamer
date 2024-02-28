@@ -1,9 +1,9 @@
 import React, { CSSProperties } from 'react';
 import { AudioTrack } from '../types/AudioTrack';
+import { useAudio } from './PlayerStateProvider';
 
 type AudioTrackCardProps = {
   track: AudioTrack;
-  onPlayPauseClick: () => void;
   isPlaying: boolean;
 };
 
@@ -20,15 +20,16 @@ const cardStyle: CSSProperties = {
   boxSizing: 'border-box'
 };
 
-const division = (content: string) => (
-  <div style={{ flex: 1, textAlign: 'center' }}>{content}</div>
-);
+export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({ track, isPlaying }) => {
+  const division = (content: string) => <div style={{ flex: 1, textAlign: 'center' }}>{content}</div>;
 
-export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({
-  track,
-  onPlayPauseClick,
-  isPlaying
-}) => {
+  const { setCurrentTrack, play } = useAudio();
+
+  const changeTrack = () => {
+    setCurrentTrack(track.url);
+    play();
+  };
+
   return (
     <div style={cardStyle}>
       {division(track.title)}
@@ -36,7 +37,7 @@ export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({
       {division(track.album || '')}
       {division(track.genre?.join(', ') || '')}
       <div style={{ flex: 1 }}>
-        <button onClick={onPlayPauseClick} style={{ width: '100%' }}>
+        <button onClick={changeTrack} style={{ width: '100%' }}>
           {isPlaying ? 'Pause' : 'Play'}
         </button>
       </div>

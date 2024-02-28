@@ -27,12 +27,7 @@ export const AudioTrackList: React.FC<AudioTrackListProps> = ({
   return (
     <div style={listStyle}>
       {tracks.map((track) => (
-        <AudioTrackCard
-          key={track.trackId}
-          track={track}
-          isPlaying={false} // Placeholder
-          onPlayPauseClick={() => onPlayPauseClick(track.trackId)}
-        />
+        <AudioTrackCard key={track.trackId} track={track} isPlaying={false} />
       ))}
     </div>
   );
