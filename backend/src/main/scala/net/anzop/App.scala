@@ -21,8 +21,8 @@ object App extends IOApp {
     for {
       _ <- Migration.flywayMigrate(DbConfig.fromEnv)
       exitCode <- BlazeServerBuilder[F]
-                   .bindHttp(8080, "localhost")
-                   .withHttpApp(Router("/" -> new TrackRoutes[F].routes).orNotFound)
+                   .bindHttp(8080, "127.0.0.1")
+                   .withHttpApp(Router("/" -> new TrackRoutes[F].corsRoutes).orNotFound)
                    .serve
                    .compile
                    .drain

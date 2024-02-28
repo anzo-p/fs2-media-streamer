@@ -5,6 +5,7 @@ import cats.effect._
 import cats.implicits._
 import io.circe.generic.auto._
 import net.anzop.audiostreamer.AddTrackMetadataInput
+import net.anzop.config.CorsPolicy
 import net.anzop.models.TrackMetadataQueryArgs
 import net.anzop.services.ServiceResult.{NotFoundError, ServiceError}
 import net.anzop.services.TrackService
@@ -20,7 +21,7 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
 
   private val responses = ResponseResolver[F]
 
-  val routes: HttpRoutes[F] = HttpRoutes.of[F] {
+  private val routes: HttpRoutes[F] = HttpRoutes.of[F] {
     case req @ POST -> Root / "tracks" =>
       (for {
         input    <- req.as[AddTrackMetadataInput]
@@ -78,4 +79,6 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
         }
         .recoverWith { case _ => InternalServerError("An unexpected error occurred") }
   }
+
+  val corsRoutes = CorsPolicy.config.apply(routes)
 }
