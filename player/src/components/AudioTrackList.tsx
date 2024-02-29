@@ -4,7 +4,6 @@ import { AudioTrack } from '../types/AudioTrack';
 
 type AudioTrackListProps = {
   tracks: AudioTrack[];
-  onPlayPauseClick: (id: string) => void;
 };
 
 const listStyle: CSSProperties = {
@@ -20,14 +19,11 @@ const listStyle: CSSProperties = {
   boxSizing: 'border-box'
 };
 
-export const AudioTrackList: React.FC<AudioTrackListProps> = ({
-  tracks,
-  onPlayPauseClick
-}) => {
+export const AudioTrackList: React.FC<AudioTrackListProps> = ({ tracks }) => {
   return (
     <div style={listStyle}>
       {tracks.map((track) => (
-        <AudioTrackCard key={track.trackId} track={track} isPlaying={false} />
+        <AudioTrackCard key={track.trackId} track={track} />
       ))}
     </div>
   );

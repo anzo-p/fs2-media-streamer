@@ -18,11 +18,6 @@ export const MusicPlayer: React.FC = () => {
     initFetch();
   }, []);
 
-  const handlePlayPauseClick = (id: string) => {
-    // Implementation depends on how you want to manage play/pause state
-    console.log('Play/Pause clicked for track ID:', id);
-  };
-
   return (
     <div>
       <h1>Music Player</h1>
@@ -31,7 +26,7 @@ export const MusicPlayer: React.FC = () => {
           throw new Error('Function not implemented.');
         }}
       />
-      <AudioTrackList tracks={tracks} onPlayPauseClick={handlePlayPauseClick} />
+      <AudioTrackList tracks={tracks} />
       <NowPlaying />
     </div>
   );

@@ -4,7 +4,6 @@ import { useAudio } from './PlayerStateProvider';
 
 type AudioTrackCardProps = {
   track: AudioTrack;
-  isPlaying: boolean;
 };
 
 const cardStyle: CSSProperties = {
@@ -20,15 +19,19 @@ const cardStyle: CSSProperties = {
   boxSizing: 'border-box'
 };
 
-export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({ track, isPlaying }) => {
-  const division = (content: string) => <div style={{ flex: 1, textAlign: 'center' }}>{content}</div>;
+export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({ track }) => {
+  const { currentTrack, setCurrentTrack, isPlaying, play, pause } = useAudio();
 
-  const { setCurrentTrack, play } = useAudio();
+  const getUrl = (trackId: string) => `http://127.0.0.1:8080/tracks/${trackId}/stream`;
+
+  const thisCurrentlyPlaying = () => currentTrack === getUrl(track.trackId) && isPlaying;
 
   const changeTrack = () => {
-    setCurrentTrack(track.url);
-    play();
+    setCurrentTrack(getUrl(track.trackId));
+    thisCurrentlyPlaying() ? pause() : play();
   };
+
+  const division = (content: string) => <div style={{ flex: 1, textAlign: 'center' }}>{content}</div>;
 
   return (
     <div style={cardStyle}>
@@ -38,7 +41,7 @@ export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({ track, isPlaying
       {division(track.genre?.join(', ') || '')}
       <div style={{ flex: 1 }}>
         <button onClick={changeTrack} style={{ width: '100%' }}>
-          {isPlaying ? 'Pause' : 'Play'}
+          {thisCurrentlyPlaying() ? 'Pause' : 'Play'}
         </button>
       </div>
     </div>
