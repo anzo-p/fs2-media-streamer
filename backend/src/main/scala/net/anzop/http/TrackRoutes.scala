@@ -65,19 +65,34 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
       }
 
     case GET -> Root / "tracks" / trackId =>
-      val handler = for {
+      val resultOr = for {
         track      <- EitherT(service.getTrackMetadata(trackId)).map(_.result)
         blobOption <- OptionT(service.downloadTrack(track)).toRight(NotFoundError: ServiceError)
-        response   <- EitherT.rightT[F, ServiceError](responses.respondFileStream(track, blobOption))
+        response   <- EitherT.rightT[F, ServiceError](responses.respondFileDownload(track, blobOption))
       } yield response
 
-      handler
-        .value
-        .flatMap {
-          case Right(resp) => resp
-          case Left(error) => responses.resolveResponse(Left(error))
-        }
-        .recoverWith { case _ => InternalServerError("An unexpected error occurred") }
+      responses.resolveResponse(resultOr)(
+        handleSuccess    = resp => resp,
+        handleError      = error => responses.resolveResponse(Left(error)),
+        handleUnexpected = _ => InternalServerError("An unexpected error occurred")
+      )
+
+    case req @ GET -> Root / "tracks" / trackId / "stream" =>
+      val resultOr = for {
+        track <- EitherT(service.getTrackMetadata(trackId)).map(_.result)
+        blob  <- OptionT(service.downloadTrack(track)).toRight(NotFoundError: ServiceError)
+        range = responses.parseRange(req.headers, blob.toArray.length.toLong)
+        response <- EitherT.rightT[F, ServiceError](range match {
+                     case Some((start, end)) => responses.respondPartialContent(blob.toArray, start, end)
+                     case None               => responses.respondFileStream(blob)
+                   })
+      } yield response
+
+      responses.resolveResponse(resultOr)(
+        handleSuccess    = resp => resp,
+        handleError      = error => responses.resolveResponse(Left(error)),
+        handleUnexpected = _ => InternalServerError("An unexpected error occurred")
+      )
   }
 
   val corsRoutes = CorsPolicy.config.apply(routes)
