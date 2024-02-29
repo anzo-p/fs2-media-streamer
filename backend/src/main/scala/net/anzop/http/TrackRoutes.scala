@@ -47,7 +47,7 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
         }
       }
 
-    case req @ POST -> Root / "tracks" / "query" =>
+    case req @ POST -> Root / "tracks" / "search" =>
       (for {
         input    <- req.as[TrackMetadataQueryArgs]
         result   <- service.getTrackList(input)
@@ -56,7 +56,7 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
         case _ => InternalServerError("An unexpected error occurred")
       }
 
-    case GET -> Root / "tracks" / "sample" =>
+    case GET -> Root / "tracks" / "search" / "sample" =>
       (for {
         result   <- service.getRandomizedTrackList(10)
         response <- responses.resolveResponse(result)
@@ -64,7 +64,7 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
         case _ => InternalServerError("An unexpected error occurred")
       }
 
-    case GET -> Root / "tracks" / trackId =>
+    case GET -> Root / "tracks" / trackId / "download" =>
       val resultOr = for {
         track      <- EitherT(service.getTrackMetadata(trackId)).map(_.result)
         blobOption <- OptionT(service.downloadTrack(track)).toRight(NotFoundError: ServiceError)
