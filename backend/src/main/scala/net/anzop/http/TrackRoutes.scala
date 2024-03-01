@@ -36,14 +36,11 @@ class TrackRoutes[F[_] : Async](streamConfig: StreamConfig)(implicit service: Tr
         m.parts.find(_.name.contains("file")) match {
           case Some(file: Part[F]) if file.filename.isDefined =>
             (for {
-              result   <- service.uploadTrackFile(trackId, file.filename.get, file.body)
+              result   <- service.uploadTrackFile(trackId, file.body)
               response <- responses.resolveResponse(result)
             } yield response).recoverWith {
               case _ => InternalServerError("An unexpected error occurred")
             }
-
-          case Some(_: Part[F]) =>
-            BadRequest("filename required")
 
           case None =>
             BadRequest("No file part found")

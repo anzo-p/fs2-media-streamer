@@ -17,6 +17,8 @@ libraryDependencies ++= Seq(
   "org.tpolecat"                 %% "doobie-postgres"     % "1.0.0-M5",
   "org.postgresql"               % "postgresql"           % "42.7.2",
   "org.flywaydb"                 % "flyway-core"          % "9.0.0",
+  "io.laserdisc"                 %% "fs2-aws-core"        % "6.1.1",
+  "io.laserdisc"                 %% "fs2-aws-s3"          % "6.1.1",
   "com.disneystreaming.smithy4s" %% "smithy4s-core"       % smithy4sVersion.value,
   "com.disneystreaming.smithy4s" %% "smithy4s-http4s"     % smithy4sVersion.value,
   "org.http4s"                   %% "http4s-blaze-server" % "0.23.14",

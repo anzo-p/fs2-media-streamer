@@ -18,7 +18,7 @@ object ServiceResult {
 
   case class InvalidObject(message: String) extends ServiceError
   case class ResourceError(message: String) extends ServiceError
-  case class UnexpectedError(message: Throwable) extends ServiceError
+  case class UnexpectedError(message: String) extends ServiceError
 
   object ServiceError {
 
@@ -26,7 +26,7 @@ object ServiceResult {
       th match {
         case e: IllegalArgumentException => InvalidObject(e.getMessage)
         case e: IllegalStateException    => InvalidObject(e.getMessage)
-        case _                           => UnexpectedError(th)
+        case _                           => UnexpectedError(th.getMessage)
       }
 
     def handle(err: DatabaseError): ServiceError =
