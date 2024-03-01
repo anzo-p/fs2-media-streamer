@@ -2,7 +2,7 @@ import smithy4s.codegen.Smithy4sCodegenPlugin
 
 lazy val root = (project in file("."))
   .settings(
-    name := "music-streaming-service",
+    name := "crates",
     version := "0.1",
     scalaVersion := "2.13.6",
     Compile / mainClass := Some("net.anzop.App")
