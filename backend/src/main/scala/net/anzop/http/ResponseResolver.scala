@@ -12,10 +12,9 @@ import net.anzop.services.ServiceResult._
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.headers.{`Content-Length`, `Content-Range`, `Content-Type`, `Range`}
+import org.http4s.headers.{`Content-Type`, `Range`}
 import org.http4s.{headers, Headers, MediaType, Response, Status}
 import org.typelevel.ci.CIStringSyntax
-import smithy4s.Blob
 
 trait ResponseResolver[F[_]] extends Http4sDsl[F] {
   implicit def F: Sync[F]
@@ -45,38 +44,33 @@ trait ResponseResolver[F[_]] extends Http4sDsl[F] {
       .recoverWith { case ex => handleUnexpected(ex) }
   }
 
-  def respondFileDownload(metadata: TrackMetadata, blob: Blob): F[Response[F]] =
-    Ok(Stream.emits(blob.toArray).covary[F])
+  def respondFileDownload(metadata: TrackMetadata, file: Stream[F, Byte]): F[Response[F]] =
+    Ok(file)
       .map(_.withContentType(`Content-Type`(MediaType.application.`octet-stream`)))
       .map(_.withHeaders(headers.`Content-Disposition`("attachment", Map(ci"filename" -> s"${metadata.title}.${metadata.format}"))))
 
-  def respondFileStream(blob: Blob): F[Response[F]] =
-    Ok(Stream.emits(blob.toArray).covary[F])
-      .map(_.withContentType(`Content-Type`(MediaType.audio.mp3)))
+  def respondFileStream(file: Stream[F, Byte]): F[Response[F]] =
+    Ok(file).map(_.withContentType(`Content-Type`(MediaType.audio.mp3)))
 
-  def parseRange(headers: Headers, blobLength: Long): Option[(Long, Option[Long])] =
+  def parseRange(headers: Headers): Option[(Long, Option[Long])] =
     headers.get[Range].flatMap { rangeHeader =>
       rangeHeader.ranges.head match {
-        case Range.SubRange(start, Some(end)) => Some((start, Some(end)))
-        case Range.SubRange(start, None)      => Some((start, Some(blobLength - 1)))
+        case Range.SubRange(start, endOpt) => Some((start, endOpt))
       }
     }
 
-  def respondPartialContent(blob: Array[Byte], start: Long, end: Option[Long]): F[Response[F]] = {
-    val fileSize      = blob.length
-    val actualEnd     = end.getOrElse(fileSize.toLong - 1)
-    val contentLength = actualEnd - start + 1
-    val bodyStream    = Stream.emits(blob.slice(start.toInt, actualEnd.toInt + 1)).covary[F]
+  def respondChunk(
+      file: Stream[F, Byte],
+      start: Long,
+      end: Long,
+      chunk: Int
+    ): F[Response[F]] = {
+    val rangedStream  = file.drop(start).take(end)
+    val chunkedStream = rangedStream.chunkN(chunk).flatMap(Stream.chunk)
 
-    Ok(bodyStream)
+    Ok(chunkedStream)
       .map(_.withStatus(Status.PartialContent))
       .map(_.withContentType(`Content-Type`(MediaType.audio.mp3)))
-      .map(
-        _.putHeaders(
-          `Content-Range`(Range.SubRange(start, actualEnd), Some(fileSize.toLong)),
-          `Content-Length`(contentLength)
-        )
-      )
   }
 }
 

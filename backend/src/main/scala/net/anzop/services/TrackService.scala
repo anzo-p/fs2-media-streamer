@@ -4,13 +4,13 @@ import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import doobie.util.transactor.Transactor
+import fs2.Stream
+import fs2.io.file.Files
 import net.anzop.audiostreamer._
 import net.anzop.db.DbOps
 import net.anzop.dto.TrackMetadataDto
 import net.anzop.models.{TrackMetadata, TrackMetadataQueryArgs}
 import net.anzop.services.ServiceResult._
-import org.http4s.multipart.Part
-import smithy4s.Blob
 
 class TrackService[F[_] : Async](implicit xa: Transactor[F], fs: FileService[F], db: DbOps[F]) {
 
@@ -22,20 +22,11 @@ class TrackService[F[_] : Async](implicit xa: Transactor[F], fs: FileService[F],
       } yield SuccessResult(TrackMetadataDto.fromModel(model))
     ).value
 
-  def uploadTrackFile(trackId: String, file: Part[F]): F[Either[ServiceError, SuccessResult[Unit]]] =
+  def uploadTrackFile(trackId: String, filename: String, file: Stream[F, Byte]): F[Either[ServiceError, SuccessResult[Unit]]] =
     (
       for {
         _    <- EitherT(db.getOneTrack(trackId).map(_.leftMap(ServiceError.handle)))
-        path <- EitherT.right(fs.saveAsync(trackId, file))
-        _    <- EitherT(db.updateFilepath(trackId, path.toString).map(_.leftMap(ServiceError.handle)))
-      } yield SuccessResult()
-    ).value
-
-  def uploadTrackFile(trackId: String, filename: String, file: Blob): F[Either[ServiceError, SuccessResult[Unit]]] =
-    (
-      for {
-        _    <- EitherT(db.getOneTrack(trackId).map(_.leftMap(ServiceError.handle)))
-        path <- EitherT.right(fs.saveSync(trackId, filename, file))
+        path <- EitherT.right(fs.saveAsync(trackId, filename, file))
         _    <- EitherT(db.updateFilepath(trackId, path.toString).map(_.leftMap(ServiceError.handle)))
       } yield SuccessResult()
     ).value
@@ -61,8 +52,12 @@ class TrackService[F[_] : Async](implicit xa: Transactor[F], fs: FileService[F],
       } yield SuccessResult(tracks.map(TrackMetadataDto.fromModel))
     ).value
 
-  def downloadTrack(track: TrackMetadata): F[Option[Blob]] =
-    fs.load(track.filepath).map(Option.apply).recover {
-      case _: Throwable => None
+  def downloadTrack(track: TrackMetadata): F[Either[ServiceError, Stream[F, Byte]]] = {
+    val filePath = fs.makePath(track.filepath)
+
+    Files[F].exists(filePath).flatMap {
+      case false => Async[F].pure(Left(NotFoundError: ServiceError))
+      case true  => Async[F].pure(Right(fs.loadAsync(track.filepath)))
     }
+  }
 }

@@ -1,11 +1,11 @@
 package net.anzop.http
 
-import cats.data.{EitherT, OptionT}
+import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import io.circe.generic.auto._
 import net.anzop.audiostreamer.AddTrackMetadataInput
-import net.anzop.config.CorsPolicy
+import net.anzop.config.{CorsPolicy, StreamConfig}
 import net.anzop.models.TrackMetadataQueryArgs
 import net.anzop.services.ServiceResult.{NotFoundError, ServiceError}
 import net.anzop.services.TrackService
@@ -16,7 +16,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.multipart.{Multipart, Part}
 import org.http4s.{EntityDecoder, HttpRoutes}
 
-class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4sDsl[F] {
+class TrackRoutes[F[_] : Async](streamConfig: StreamConfig)(implicit service: TrackService[F]) extends Http4sDsl[F] {
   implicit val ed: EntityDecoder[F, AddTrackMetadataInput] = jsonOf[F, AddTrackMetadataInput]
 
   private val responses = ResponseResolver[F]
@@ -34,13 +34,16 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
     case req @ POST -> Root / "tracks" / trackId / "file" =>
       req.decode[Multipart[F]] { m =>
         m.parts.find(_.name.contains("file")) match {
-          case Some(file: Part[F]) =>
+          case Some(file: Part[F]) if file.filename.isDefined =>
             (for {
-              result   <- service.uploadTrackFile(trackId, file)
+              result   <- service.uploadTrackFile(trackId, file.filename.get, file.body)
               response <- responses.resolveResponse(result)
             } yield response).recoverWith {
               case _ => InternalServerError("An unexpected error occurred")
             }
+
+          case Some(_: Part[F]) =>
+            BadRequest("filename required")
 
           case None =>
             BadRequest("No file part found")
@@ -66,31 +69,37 @@ class TrackRoutes[F[_] : Async](implicit service: TrackService[F]) extends Http4
 
     case GET -> Root / "tracks" / trackId / "download" =>
       val resultOr = for {
-        track      <- EitherT(service.getTrackMetadata(trackId)).map(_.result)
-        blobOption <- OptionT(service.downloadTrack(track)).toRight(NotFoundError: ServiceError)
-        response   <- EitherT.rightT[F, ServiceError](responses.respondFileDownload(track, blobOption))
+        track    <- EitherT(service.getTrackMetadata(trackId)).map(_.result)
+        blob     <- EitherT(service.downloadTrack(track))
+        response <- EitherT.rightT[F, ServiceError](responses.respondFileDownload(track, blob))
       } yield response
 
       responses.resolveResponse(resultOr)(
-        handleSuccess    = resp => resp,
-        handleError      = error => responses.resolveResponse(Left(error)),
+        handleSuccess = identity,
+        handleError = {
+          case NotFoundError => NotFound()
+          case error         => responses.resolveResponse(Left(error))
+        },
         handleUnexpected = _ => InternalServerError("An unexpected error occurred")
       )
 
     case req @ GET -> Root / "tracks" / trackId / "stream" =>
       val resultOr = for {
         track <- EitherT(service.getTrackMetadata(trackId)).map(_.result)
-        blob  <- OptionT(service.downloadTrack(track)).toRight(NotFoundError: ServiceError)
-        range = responses.parseRange(req.headers, blob.toArray.length.toLong)
+        blob  <- EitherT(service.downloadTrack(track))
+        range = responses.parseRange(req.headers)
         response <- EitherT.rightT[F, ServiceError](range match {
-                     case Some((start, end)) => responses.respondPartialContent(blob.toArray, start, end)
-                     case None               => responses.respondFileStream(blob)
+                     case Some((start, Some(end))) => responses.respondChunk(blob, start, end, streamConfig.chunkSize)
+                     case _                        => responses.respondFileStream(blob)
                    })
       } yield response
 
       responses.resolveResponse(resultOr)(
-        handleSuccess    = resp => resp,
-        handleError      = error => responses.resolveResponse(Left(error)),
+        handleSuccess = identity,
+        handleError = {
+          case NotFoundError => NotFound()
+          case error         => responses.resolveResponse(Left(error))
+        },
         handleUnexpected = _ => InternalServerError("An unexpected error occurred")
       )
   }
