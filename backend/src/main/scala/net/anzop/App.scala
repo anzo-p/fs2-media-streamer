@@ -13,9 +13,10 @@ import org.http4s.server.Router
 object App extends IOApp {
 
   private def startServer[F[_] : Async]: F[ExitCode] = {
+    val dbConfig     = DbConfig.fromEnv
     val streamConfig = StreamConfig.fromEnv
 
-    implicit val xa: Transactor[F]   = new Doobie[F].xa
+    implicit val xa: Transactor[F]   = new Doobie[F](dbConfig).xa
     implicit val db: DbOps[F]        = new DbOps[F]
     implicit val fs: FileService[F]  = new FileService[F](streamConfig)
     implicit val ts: TrackService[F] = new TrackService[F]
