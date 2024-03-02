@@ -9,8 +9,13 @@ import net.anzop.http.TrackRoutes
 import net.anzop.services.{S3Service, TrackService}
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+
+import scala.concurrent.duration.Duration
 
 object App extends IOApp {
+  implicit def logger[F[_] : Sync]: Logger[F] = Slf4jLogger.getLogger[F]
 
   private def startServer[F[_] : Async]: F[ExitCode] = {
     val dbConfig = DbConfig.fromEnv
@@ -24,9 +29,12 @@ object App extends IOApp {
 
     for {
       _ <- Migration.flywayMigrate(dbConfig)
+      _ <- logger.info("Database migration completed, starting server...")
       exitCode <- BlazeServerBuilder[F]
-                   .bindHttp(8080, "127.0.0.1")
+                   .bindHttp(8080, "0.0.0.0")
                    .withHttpApp(Router("/" -> trackRoutes.corsRoutes).orNotFound)
+                   .withIdleTimeout(Duration("2m"))
+                   .withResponseHeaderTimeout(Duration("30s"))
                    .serve
                    .compile
                    .drain

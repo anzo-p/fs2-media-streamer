@@ -24,7 +24,10 @@ libraryDependencies ++= Seq(
   "org.http4s"                   %% "http4s-blaze-server" % "0.23.14",
   "org.http4s"                   %% "http4s-dsl"          % "0.23.14",
   "org.http4s"                   %% "http4s-circe"        % "0.23.14",
-  "io.circe"                     %% "circe-generic"       % "0.14.5"
+  "io.circe"                     %% "circe-generic"       % "0.14.5",
+  "org.typelevel"                %% "log4cats-core"       % "2.2.0",
+  "org.typelevel"                %% "log4cats-slf4j"      % "2.2.0",
+  "ch.qos.logback"               % "logback-classic"      % "1.4.14"
 )
 
 libraryDependencies ++= Seq(
