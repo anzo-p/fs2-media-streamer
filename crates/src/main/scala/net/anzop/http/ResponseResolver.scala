@@ -16,8 +16,7 @@ import org.http4s.headers.{`Content-Type`, `Range`}
 import org.http4s.{headers, Headers, MediaType, Response, Status}
 import org.typelevel.ci.CIStringSyntax
 
-trait ResponseResolver[F[_]] extends Http4sDsl[F] {
-  implicit def F: Sync[F]
+class ResponseResolver[F[_] : Async] extends Http4sDsl[F] {
 
   def resolveResponse[T : Encoder](result: Either[ServiceError, SuccessResult[T]]): F[Response[F]] =
     result match {
@@ -71,12 +70,5 @@ trait ResponseResolver[F[_]] extends Http4sDsl[F] {
     Ok(chunkedStream)
       .map(_.withStatus(Status.PartialContent))
       .map(_.withContentType(`Content-Type`(MediaType.audio.mp3)))
-  }
-}
-
-object ResponseResolver {
-
-  def apply[F[_]](implicit syncF: Sync[F]): ResponseResolver[F] = new ResponseResolver[F] {
-    implicit override def F: Sync[F] = syncF
   }
 }

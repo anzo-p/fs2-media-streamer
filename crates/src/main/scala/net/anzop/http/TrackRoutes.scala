@@ -19,7 +19,7 @@ import org.http4s.{EntityDecoder, HttpRoutes}
 class TrackRoutes[F[_] : Async](streamConfig: StreamConfig)(implicit service: TrackService[F]) extends Http4sDsl[F] {
   implicit val ed: EntityDecoder[F, AddTrackMetadataInput] = jsonOf[F, AddTrackMetadataInput]
 
-  private val responses = ResponseResolver[F]
+  private val responses = new ResponseResolver[F]
 
   private val routes: HttpRoutes[F] = HttpRoutes.of[F] {
     case req @ POST -> Root / "tracks" =>
