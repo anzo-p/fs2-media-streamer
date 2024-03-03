@@ -19,6 +19,10 @@ class DbOps[F[_] : Async] {
       .value
   }
 
+  def getLive()(implicit xa: Transactor[F]): F[Either[DatabaseError, ServiceResult]] =
+    runQuery(sql"SELECT 1".query[Int].unique)
+      .map(_.map(_ => SuccessResult()))
+
   def addTrackMetadata(model: TrackMetadata)(implicit xa: Transactor[F]): F[Either[DatabaseError, TrackMetadata]] = {
     val insertSql = """
       INSERT INTO tracks (album, artist, bitrate, duration, filepath, filesize, format, genre, title, track_id, year)
