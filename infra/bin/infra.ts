@@ -2,6 +2,7 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { AuroraStack } from '../lib/aurora-stack';
+import { AppInfraStack } from '../lib/app-infra-stack';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -16,7 +17,8 @@ const env = {
 };
 
 const stacks: { [key: string]: () => void } = {
-  StackDB: () => new AuroraStack(app, 'AuroraStack', { env })
+  StackDB: () => new AuroraStack(app, 'AuroraStack', { env }),
+  StackApp: () => new AppInfraStack(app, 'InfraStack', { env })
 };
 
 Object.keys(stacks).forEach((stackName) => {
