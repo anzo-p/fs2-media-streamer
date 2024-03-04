@@ -1,13 +1,13 @@
 import { AudioTrack, AudioTrackQuery } from '../types/AudioTrack';
 
 const fetchSampleTracks = async (): Promise<AudioTrack[]> => {
-  const response = await fetch('http://127.0.0.1:8080/tracks/search/sample');
+  const response = await fetch('https://musicbox.anzop.net/tracks/search/sample');
   const data: AudioTrack[] = await response.json();
   return data;
 };
 
 const searchTracks = async (query: AudioTrackQuery): Promise<AudioTrack[]> => {
-  const response = await fetch('http://127.0.0.1:8080/tracks/search/query', {
+  const response = await fetch('https://musicbox.anzop.net/tracks/search/query', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

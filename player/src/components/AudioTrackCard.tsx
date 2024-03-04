@@ -22,7 +22,7 @@ const cardStyle: CSSProperties = {
 export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({ track }) => {
   const { currentTrack, setCurrentTrack, isPlaying, play, pause } = useAudio();
 
-  const getUrl = (trackId: string) => `http://127.0.0.1:8080/tracks/${trackId}/stream`;
+  const getUrl = (trackId: string) => `https://musicbox.anzop.net/tracks/${trackId}/stream`;
 
   const thisCurrentlyPlaying = () => currentTrack === getUrl(track.trackId) && isPlaying;
 
