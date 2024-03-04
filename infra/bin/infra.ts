@@ -7,28 +7,22 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-let deployed = false;
-
 const app = new cdk.App();
-const args = process.argv.slice(2);
 const env = {
   account: process.env.AWS_ACCOUNT,
   region: process.env.AWS_REGION
 };
 
-const stacks: { [key: string]: () => void } = {
-  StackDB: () => new AuroraStack(app, 'AuroraStack', { env }),
-  StackApp: () => new AppInfraStack(app, 'InfraStack', { env })
-};
+const targetStack = app.node.tryGetContext('stack');
 
-Object.keys(stacks).forEach((stackName) => {
-  if (args.includes(stackName)) {
-    stacks[stackName]();
-    deployed = true;
-  }
-});
-
-if (!deployed) {
-  console.error('Error: No stack specified for deployment. Please specify a stack name.');
-  process.exit(1);
+switch (targetStack) {
+  case 'aurora':
+    new AuroraStack(app, 'AuroraStack', { env });
+    break;
+  case 'appinfra':
+    new AppInfraStack(app, 'AppInfraStack', { env });
+    break;
+  default:
+    console.error('Error: No valid stack specified for deployment. Please specify a valid stack name.');
+    process.exit(1);
 }
