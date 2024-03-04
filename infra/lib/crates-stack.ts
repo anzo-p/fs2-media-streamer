@@ -44,6 +44,7 @@ export class CratesStack extends cdk.NestedStack {
         AWS_ACCESS_KEY_ID: `${process.env.AWS_ACCESS_KEY_ID}`,
         AWS_SECRET_ACCESS_KEY: `${process.env.AWS_SECRET_ACCESS_KEY}`,
         AWS_REGION: `${process.env.AWS_REGION}`,
+        CORS_ALLOWED_ORIGINS: `${process.env.CORS_ALLOWED_ORIGINS}`,
         DB_URL: `jdbc:postgresql://${process.env.DB_ENDPOINT}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
         DB_USERNAME: `${process.env.DB_USERNAME}`,
         DB_PASSWORD: `${process.env.DB_PASSWORD}`,
