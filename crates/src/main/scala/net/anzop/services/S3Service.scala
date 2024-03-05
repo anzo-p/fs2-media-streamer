@@ -8,10 +8,13 @@ import fs2.aws.s3.S3
 import fs2.aws.s3.models.Models.{ETag, FileKey}
 import io.laserdisc.pure.s3.tagless.{S3AsyncClientOp, Interpreter => S3Interpreter}
 import net.anzop.config.S3Config
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.services.s3.S3AsyncClient
 
 class S3Service[F[_] : Async](s3Config: S3Config) {
+  implicit def logger: Logger[F] = Slf4jLogger.getLogger[F]
 
   private val s3StreamResource: Resource[F, S3AsyncClientOp[F]] =
     for {
@@ -32,7 +35,7 @@ class S3Service[F[_] : Async](s3Config: S3Config) {
         fileStream.through(s3.uploadFile(s3Config.bucket, key))
       }
       .handleErrorWith { e =>
-        Stream.eval(Async[F].pure(println(s"Error uploading $key to S3: ${e.getMessage}"))) >> Stream.raiseError[F](e)
+        Stream.eval(Async[F].pure(logger.error(s"Error uploading $key to S3: ${e.getMessage}"))) >> Stream.raiseError[F](e)
       }
       .compile
       .lastOrError

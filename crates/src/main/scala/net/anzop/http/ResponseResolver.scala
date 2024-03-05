@@ -15,16 +15,26 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.{`Content-Type`, `Range`}
 import org.http4s.{headers, Headers, MediaType, Response, Status}
 import org.typelevel.ci.CIStringSyntax
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 class ResponseResolver[F[_] : Async] extends Http4sDsl[F] {
+  implicit def logger: Logger[F] = Slf4jLogger.getLogger[F]
 
   def resolveResponse[T : Encoder](result: Either[ServiceError, SuccessResult[T]]): F[Response[F]] =
     result match {
-      case Right(success)               => Ok(success.result.asJson)
-      case Left(ConflictError)          => Conflict()
-      case Left(InvalidObject(message)) => BadRequest(message.asJson)
-      case Left(NotFoundError)          => NotFound()
-      case Left(_)                      => InternalServerError("An unexpected error occurred")
+      case Right(success) =>
+        Ok(success.result.asJson)
+
+      case Left(error) =>
+        logger.error(s"Request resulted in error: ${error.toString}") *> {
+          error match {
+            case ConflictError          => Conflict()
+            case InvalidObject(message) => BadRequest(message.asJson)
+            case NotFoundError          => NotFound()
+            case _                      => InternalServerError("An unexpected error occurred")
+          }
+        }
     }
 
   def resolveResponse[A](
@@ -38,7 +48,7 @@ class ResponseResolver[F[_] : Async] extends Http4sDsl[F] {
       .value
       .flatMap {
         case Right(success) => handleSuccess(success)
-        case Left(error)    => handleError(error)
+        case Left(error)    => logger.error(s"Request resulted in error: ${error.toString}") *> handleError(error)
       }
       .recoverWith { case ex => handleUnexpected(ex) }
   }
