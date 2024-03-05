@@ -3,59 +3,62 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 
-export class AuroraStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+export class AuroraStack extends cdk.NestedStack {
+  readonly endpoint: string;
+
+  constructor(
+    scope: Construct,
+    id: string,
+    vpc: ec2.Vpc,
+    clientSecurityGroup: ec2.SecurityGroup,
+    props?: cdk.StackProps
+  ) {
     super(scope, id, props);
 
-    const vpc = new ec2.Vpc(this, 'AudioStreamerVpc', {
-      maxAzs: 2,
-      subnetConfiguration: [
-        {
-          name: 'public',
-          subnetType: ec2.SubnetType.PUBLIC
-        },
-        {
-          name: 'isolated',
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED
-        }
-      ],
-      natGateways: 0
-    });
-
-    const auroraSg = new ec2.SecurityGroup(this, 'AuroraSecurityGroup', {
+    const auroraSecurityGroup = new ec2.SecurityGroup(this, 'AuroraSecurityGroup', {
       vpc
     });
 
-    const credentials = rds.Credentials.fromPassword(
-      process.env.DB_USERNAME!,
-      cdk.SecretValue.unsafePlainText(process.env.DB_PASSWORD!)
-    );
+    const dbSubnetGroupName = new rds.CfnDBSubnetGroup(this, 'MySubnetGroup', {
+      dbSubnetGroupDescription: 'Subnet group for Aurora Serverless',
+      subnetIds: vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_ISOLATED }).subnetIds
+    }).ref;
 
-    new rds.ServerlessCluster(this, 'AudioStreamerAuroraPostgres', {
-      credentials,
-      engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_13_10
-      }),
-      defaultDatabaseName: `${process.env.DB_NAME}`,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      scaling: {
-        autoPause: cdk.Duration.minutes(5),
-        minCapacity: rds.AuroraCapacityUnit.ACU_8,
-        maxCapacity: rds.AuroraCapacityUnit.ACU_32
+    // Cfn tier allows to attach snapshots
+    const baseAuroraProps: rds.CfnDBClusterProps = {
+      databaseName: process.env.DB_NAME!,
+      dbClusterIdentifier: 'aurora-pg-audio-streamer-crates',
+      dbSubnetGroupName,
+      deletionProtection: true,
+      engine: 'aurora-postgresql',
+      engineMode: 'serverless',
+      engineVersion: rds.AuroraPostgresEngineVersion.VER_13_10.auroraPostgresMajorVersion,
+      masterUsername: process.env.DB_USERNAME!,
+      masterUserPassword: process.env.DB_PASSWORD!,
+      scalingConfiguration: {
+        autoPause: true,
+        minCapacity: rds.AuroraCapacityUnit.ACU_4,
+        maxCapacity: rds.AuroraCapacityUnit.ACU_16,
+        secondsUntilAutoPause: 5 * 60
       },
-      securityGroups: [auroraSg],
-      vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED
-      }
-    });
+      vpcSecurityGroupIds: [auroraSecurityGroup.securityGroupId]
+    };
 
-    new cdk.CfnOutput(this, 'ExportedVpcId', {
-      value: vpc.vpcId
-    });
+    const auroraProps: rds.CfnDBClusterProps = process.env.DB_SNAPSHOT_ID
+      ? {
+          ...baseAuroraProps,
+          snapshotIdentifier: process.env.DB_SNAPSHOT_ID
+        }
+      : baseAuroraProps;
 
-    new cdk.CfnOutput(this, 'ExportedAuroraSecurityGroupId', {
-      value: auroraSg.securityGroupId
-    });
+    const auroraCluster = new rds.CfnDBCluster(this, 'MyAuroraCluster', auroraProps);
+
+    this.endpoint = auroraCluster.attrEndpointAddress;
+
+    auroraSecurityGroup.addIngressRule(
+      clientSecurityGroup,
+      ec2.Port.tcp(5432),
+      'Aurora to accept conection from Crates service'
+    );
   }
 }

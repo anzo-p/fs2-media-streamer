@@ -10,17 +10,14 @@ export class CratesStack extends cdk.NestedStack {
   constructor(
     scope: Construct,
     id: string,
+    cratesSecurityGroup: ec2.SecurityGroup,
     ecsCluster: ecs.Cluster,
     executionRole: iam.Role,
     cratesAlbListener: elbv2.ApplicationListener,
+    dbEndpoint: string,
     props?: cdk.StackProps
   ) {
     super(scope, id, props);
-
-    const cratesSecurityGroup = new ec2.SecurityGroup(this, 'CratesSecurityGroup', {
-      vpc: ecsCluster.vpc,
-      allowAllOutbound: true
-    });
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, 'CratesTaskDefinition', {
       family: 'CratesTaskDefinition',
@@ -45,7 +42,7 @@ export class CratesStack extends cdk.NestedStack {
         AWS_SECRET_ACCESS_KEY: `${process.env.AWS_SECRET_ACCESS_KEY}`,
         AWS_REGION: `${process.env.AWS_REGION}`,
         CORS_ALLOWED_ORIGINS: `${process.env.CORS_ALLOWED_ORIGINS}`,
-        DB_URL: `jdbc:postgresql://${process.env.DB_ENDPOINT}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
+        DB_URL: `jdbc:postgresql://${dbEndpoint}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
         DB_USERNAME: `${process.env.DB_USERNAME}`,
         DB_PASSWORD: `${process.env.DB_PASSWORD}`,
         STREAM_CHUNK_SIZE: `${process.env.STREAM_CHUNK_SIZE}`,
@@ -80,17 +77,5 @@ export class CratesStack extends cdk.NestedStack {
         }
       })
     });
-
-    const auroraSecurityGroup = ec2.SecurityGroup.fromSecurityGroupId(
-      this,
-      'ImportedAuroraSecurityGroup',
-      `${process.env.DB_SECURITY_GROUP_ID}`
-    );
-
-    auroraSecurityGroup.addIngressRule(
-      cratesSecurityGroup,
-      ec2.Port.tcp(5432),
-      'Aurora to accept conection from Crates service'
-    );
   }
 }
