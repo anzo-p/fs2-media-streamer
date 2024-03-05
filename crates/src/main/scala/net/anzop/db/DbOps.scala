@@ -1,6 +1,6 @@
 package net.anzop.db
 
-import cats.data.EitherT
+import cats.ApplicativeError
 import cats.effect.Async
 import cats.syntax.all._
 import doobie.implicits._
@@ -11,13 +11,13 @@ import net.anzop.db.errors._
 import net.anzop.models.{TrackMetadata, TrackMetadataQueryArgs}
 import net.anzop.services.ServiceResult._
 
-class DbOps[F[_] : Async] {
+class DbOps[F[_] : Async] extends RetryingDb[F] {
 
-  private def runQuery[A](db: ConnectionIO[A])(implicit xa: Transactor[F]): F[Either[DatabaseError, A]] = {
-    EitherT(db.transact(xa).attempt)
-      .leftMap(th => DatabaseError.handle(th))
-      .value
-  }
+  private def runQuery[A](db: ConnectionIO[A])(implicit xa: Transactor[F]): F[Either[DatabaseError, A]] =
+    runQueryWithRetry(db).attempt.flatMap {
+      case Right(value) => ApplicativeError[F, Throwable].pure(Right(value))
+      case Left(error)  => ApplicativeError[F, Throwable].pure(Left(DatabaseError.handle(error)))
+    }
 
   def getLive()(implicit xa: Transactor[F]): F[Either[DatabaseError, ServiceResult]] =
     runQuery(sql"SELECT 1".query[Int].unique)
