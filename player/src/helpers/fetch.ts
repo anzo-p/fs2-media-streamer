@@ -1,7 +1,7 @@
 export const fetchWithTimeout = (
   resource: RequestInfo,
   options: RequestInit = {},
-  timeout: number = 10000
+  timeout: number = 20000
 ): Promise<Response> => {
   let timeoutId: NodeJS.Timeout;
   const timeoutPromise = new Promise<never>((_, reject) => {

@@ -22,40 +22,18 @@ const cardStyle: CSSProperties = {
 
 export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({ track }) => {
   const { currentTrack, setCurrentTrack, isPlaying, play, pause } = useAudio();
-  const [isWaitingForBackend, setIsWaitingForBackend] = useState(false);
-  const [isBufferingStream, setIsBufferingStream] = useState(false);
-  const [waitingTime, setWaitingTime] = useState(0);
 
   const getUrl = (trackId: string) => `https://musicbox.anzop.net/tracks/${trackId}/stream`;
 
   const thisCurrentlyPlaying = () => currentTrack === getUrl(track.trackId) && isPlaying;
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    if (isWaitingForBackend || isBufferingStream) {
-      intervalId = setInterval(() => {
-        setWaitingTime((time) => time + 1);
-      }, 1000);
-    }
-    return () => clearInterval(intervalId);
-  }, [isWaitingForBackend, isBufferingStream]);
-
   const changeTrack = async () => {
     try {
-      setIsWaitingForBackend(true);
       const response: Response = await fetchWithTimeout(getUrl(track.trackId));
-      setIsWaitingForBackend(false);
-      setWaitingTime(0);
-
       setCurrentTrack(response.url);
-
-      setIsBufferingStream(true);
       thisCurrentlyPlaying() ? pause() : play();
-      setIsBufferingStream(false);
     } catch (error) {
       console.error('Fetch error:', error);
-      setIsWaitingForBackend(false);
-      setIsBufferingStream(false);
     }
   };
 
@@ -71,8 +49,6 @@ export const AudioTrackCard: React.FC<AudioTrackCardProps> = ({ track }) => {
         <button onClick={changeTrack} style={{ width: '100%' }}>
           {thisCurrentlyPlaying() ? 'Pause' : 'Play'}
         </button>
-        {isWaitingForBackend && <div style={{ flex: 1, textAlign: 'center' }}>Waiting for backend.. {waitingTime}</div>}
-        {isBufferingStream && <div style={{ flex: 1, textAlign: 'center' }}>Buffering.. {waitingTime} </div>}
       </div>
     </div>
   );
