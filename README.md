@@ -1,8 +1,8 @@
 ## FS2 Media Streamer
 
-A Backend for streaming media fiels using Scala, Cats Effects, FS2, Http4s
+Crates - A Backend for streaming media fiels using Scala, Cats Effects, FS2, Http4s
 
-A small web app with a tracklist and media player
+Player - A small web app with a tracklist and media player
 
 Fully hosted in AWS
 
